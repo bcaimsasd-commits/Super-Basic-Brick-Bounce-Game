@@ -51,7 +51,7 @@ function bounceOffBricks() {
   for (let i = 0; i < bricks.length; i++) {
     const brick = bricks[i];
     if (!boxesTouch(ball, brick)) {
-      continue;  // not touching this brick, check the next one
+      continue;
     }
 
     // How far has the ball pushed into the brick on each side?
@@ -62,22 +62,30 @@ function bounceOffBricks() {
       // The ball hit the brick's left or right side.
       ball.vx = -ball.vx;
       if (ball.x < brick.x) {
-        ball.x = brick.x - ball.width;     // left of the brick
+        ball.x = brick.x - ball.width;
       } else {
-        ball.x = brick.x + brick.width;    // right of the brick
+        ball.x = brick.x + brick.width;
       }
     } else {
       // The ball hit the brick's top or bottom.
       ball.vy = -ball.vy;
       if (ball.y < brick.y) {
-        ball.y = brick.y - ball.height;    // above the brick
+        ball.y = brick.y - ball.height;
       } else {
-        ball.y = brick.y + brick.height;   // below the brick
+        ball.y = brick.y + brick.height;
       }
     }
 
-    // Remove the brick when touched by removing it from the array
-    bricks.splice(i, 1);
-    break;  // bounce off one brick per update, then stop looking
+    if (brick.breakable) {
+      brick.breakable.hitsLeft = brick.breakable.hitsLeft - 1;
+
+      if (brick.breakable.hitsLeft <= 0) {
+        bricks.splice(i, 1);
+      }
+    } else {
+      bricks.splice(i, 1);
+    }
+
+    break;
   }
 }
