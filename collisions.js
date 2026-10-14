@@ -46,8 +46,8 @@ function bounceOffPaddle() {
 }
 
 
-// The ball bounces off the bricks and removes them when touched.
-function bounceOffBricks() {
+// The brick collision system uses each brick's breakable component.
+function brickCollisionSystem() {
   for (let i = 0; i < bricks.length; i++) {
     const brick = bricks[i];
     if (!boxesTouch(ball, brick)) {
@@ -81,11 +81,37 @@ function bounceOffBricks() {
 
       if (brick.breakable.hitsLeft <= 0) {
         bricks.splice(i, 1);
+        onBrickDestroyed(brick);
       }
     } else {
       bricks.splice(i, 1);
+      onBrickDestroyed(brick);
     }
 
     break;
+  }
+}
+
+
+function pickupCollisionSystem() {
+  for (let i = pickups.length - 1; i >= 0; i--) {
+    const pickup = pickups[i];
+    if (!boxesTouch(pickup, paddle)) {
+      continue;
+    }
+
+    if (pickup.kind === "wide") {
+      const center = paddle.x + paddle.width / 2;
+      paddle.width = Math.min(paddle.width + 30, 150);
+      paddle.x = Math.max(0, Math.min(WIDTH - paddle.width, center - paddle.width / 2));
+    } else {
+      const speed = Math.hypot(ball.vx, ball.vy);
+      const slowerSpeed = Math.max(speed * 0.8, BALL_SPEED * 0.7);
+      const scale = slowerSpeed / speed;
+      ball.vx = ball.vx * scale;
+      ball.vy = ball.vy * scale;
+    }
+
+    pickups.splice(i, 1);
   }
 }

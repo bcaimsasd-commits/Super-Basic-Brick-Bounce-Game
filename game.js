@@ -55,6 +55,25 @@ const paddle = {
 // THE BRICKS (the list is filled in by makeBricks() in bricks.js)
 // ------------------------------------------------------------
 let bricks = [];
+let stage = 1;
+let pickups = [];
+const PICKUP_SIZE = 16;
+
+const stageDisplay = document.getElementById("stage");
+
+function updateStatus() {
+  stageDisplay.textContent = stage;
+}
+
+function onBrickDestroyed(brick) {
+  pickups.push({
+    x: brick.x + brick.width / 2 - PICKUP_SIZE / 2,
+    y: brick.y + brick.height / 2 - PICKUP_SIZE / 2,
+    width: PICKUP_SIZE,
+    height: PICKUP_SIZE,
+    kind: Math.random() < 0.5 ? "wide" : "slow"
+  });
+}
 
 
 // ------------------------------------------------------------
@@ -86,7 +105,15 @@ function update() {
 
   bounceOffWalls();   // collisions.js
   bounceOffPaddle();  // collisions.js
-  bounceOffBricks();  // collisions.js
+  brickCollisionSystem();  // collisions.js
+  updatePickups();
+  pickupCollisionSystem();  // collisions.js
+
+  if (bricks.length === 0) {
+    stage = stage + 1;
+    bricks = makeBricks(stage);
+    updateStatus();
+  }
 
   // The ball fell off the bottom: back to the center.
   if (ball.y > HEIGHT) {
@@ -116,6 +143,15 @@ function moveBall() {
   ball.y = ball.y + ball.vy;
 }
 
+function updatePickups() {
+  for (let i = pickups.length - 1; i >= 0; i--) {
+    pickups[i].y = pickups[i].y + 2;
+    if (pickups[i].y > HEIGHT) {
+      pickups.splice(i, 1);
+    }
+  }
+}
+
 
 // ------------------------------------------------------------
 // DRAW: paints everything on the canvas. Black background,
@@ -130,6 +166,15 @@ function draw() {
   ctx.fillRect(ball.x, ball.y, ball.width, ball.height);
 
   drawBricks();  // bricks.js
+  for (const pickup of pickups) {
+    ctx.fillStyle = pickup.kind === "wide" ? "#4ecdc4" : "#ffd166";
+    ctx.fillRect(pickup.x, pickup.y, pickup.width, pickup.height);
+    ctx.fillStyle = "black";
+    ctx.font = "bold 11px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(pickup.kind === "wide" ? "W" : "S", pickup.x + pickup.width / 2, pickup.y + pickup.height / 2);
+  }
 }
 
 
@@ -162,8 +207,9 @@ function frame(now) {
 }
 
 function start() {
-  bricks = makeBricks();  // bricks.js
+  bricks = makeBricks(stage);  // bricks.js
   resetBall();
+  updateStatus();
   lastTime = performance.now();
   requestAnimationFrame(frame);
 }

@@ -29,6 +29,18 @@ canvas {
   background: #000;
 }
 
+.status {
+  display: flex;
+  justify-content: center;
+  padding: 10px 2px 0;
+  font-size: 14px;
+}
+
+.status strong {
+  color: #ffd166;
+  font-size: 18px;
+}
+
 p {
   margin: 12px 0 0;
   font-size: 14px;
