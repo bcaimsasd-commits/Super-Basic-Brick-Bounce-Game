@@ -45,7 +45,7 @@ function makeBricks(stage = 1) {
 
 // Draws every brick in the list.
 function drawBricks() {
-  for (const brick of bricks) {
+  for (const brick of GameState.bricks) {
     ctx.fillStyle = brick.color;
     ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
   }

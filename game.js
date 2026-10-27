@@ -21,52 +21,60 @@ const HEIGHT = canvas.height; // 450
 // ------------------------------------------------------------
 const BALL_SPEED = 4;
 
-const ball = {
-  x: 0,
-  y: 0,
-  width: 12,
-  height: 12,
-  vx: 0,
-  vy: 0
+// Singleton: one shared game-state object keeps every system using the same values.
+const GameState = {
+  ball: {
+    x: 0,
+    y: 0,
+    width: 12,
+    height: 12,
+    vx: 0,
+    vy: 0,
+    launched: false
+  },
+  paddle: {
+    x: WIDTH / 2 - 45,
+    y: HEIGHT - 30,
+    width: 90,
+    height: 12,
+    speed: 6
+  },
+  bricks: [],
+  stage: 1,
+  pickups: [],
+  launchBall() {
+    if (this.ball.launched) {
+      return;
+    }
+    this.ball.vx = BALL_SPEED;
+    this.ball.vy = -BALL_SPEED;
+    this.ball.launched = true;
+  }
 };
 
-// Put the ball in the center and reset its speed and direction.
+// Place the ball above the paddle and wait for the next launch.
 function resetBall() {
-  ball.x = WIDTH / 2 - ball.width / 2;
-  ball.y = HEIGHT / 2 - ball.height / 2;
-  ball.vx = BALL_SPEED;  // right
-  ball.vy = BALL_SPEED;  // down
+  GameState.ball.x = GameState.paddle.x + GameState.paddle.width / 2 - GameState.ball.width / 2;
+  GameState.ball.y = GameState.paddle.y - GameState.ball.height;
+  GameState.ball.vx = 0;
+  GameState.ball.vy = 0;
+  GameState.ball.launched = false;
 }
 
 
 // ------------------------------------------------------------
-// THE PADDLE
+// THE PICKUPS
 // ------------------------------------------------------------
-const paddle = {
-  x: WIDTH / 2 - 45,
-  y: HEIGHT - 30,
-  width: 90,
-  height: 12,
-  speed: 6
-};
-
-
-// ------------------------------------------------------------
-// THE BRICKS (the list is filled in by makeBricks() in bricks.js)
-// ------------------------------------------------------------
-let bricks = [];
-let stage = 1;
-let pickups = [];
 const PICKUP_SIZE = 16;
 
 const stageDisplay = document.getElementById("stage");
 
 function updateStatus() {
-  stageDisplay.textContent = stage;
+  stageDisplay.textContent = GameState.stage;
 }
 
 function onBrickDestroyed(brick) {
-  pickups.push({
+  GameState.pickups.push({
     x: brick.x + brick.width / 2 - PICKUP_SIZE / 2,
     y: brick.y + brick.height / 2 - PICKUP_SIZE / 2,
     width: PICKUP_SIZE,
@@ -84,6 +92,10 @@ const keys = {};
 
 document.addEventListener("keydown", function (event) {
   keys[event.key.toLowerCase()] = true;
+  if (event.code === "Space") {
+    GameState.launchBall();
+    event.preventDefault();
+  }
   // Stop the arrow keys from scrolling the page.
   if (event.key.startsWith("Arrow")) {
     event.preventDefault();
@@ -109,45 +121,50 @@ function update() {
   updatePickups();
   pickupCollisionSystem();  // collisions.js
 
-  if (bricks.length === 0) {
-    stage = stage + 1;
-    bricks = makeBricks(stage);
+  if (GameState.bricks.length === 0) {
+    GameState.stage = GameState.stage + 1;
+    GameState.bricks = makeBricks(GameState.stage);
     updateStatus();
   }
 
   // The ball fell off the bottom: back to the center.
-  if (ball.y > HEIGHT) {
+  if (GameState.ball.y > HEIGHT) {
     resetBall();
   }
 }
 
 function movePaddle() {
   if (keys["arrowleft"] || keys["a"]) {
-    paddle.x = paddle.x - paddle.speed;
+    GameState.paddle.x = GameState.paddle.x - GameState.paddle.speed;
   }
   if (keys["arrowright"] || keys["d"]) {
-    paddle.x = paddle.x + paddle.speed;
+    GameState.paddle.x = GameState.paddle.x + GameState.paddle.speed;
   }
 
   // Keep the paddle on the screen.
-  if (paddle.x < 0) {
-    paddle.x = 0;
+  if (GameState.paddle.x < 0) {
+    GameState.paddle.x = 0;
   }
-  if (paddle.x + paddle.width > WIDTH) {
-    paddle.x = WIDTH - paddle.width;
+  if (GameState.paddle.x + GameState.paddle.width > WIDTH) {
+    GameState.paddle.x = WIDTH - GameState.paddle.width;
   }
 }
 
 function moveBall() {
-  ball.x = ball.x + ball.vx;
-  ball.y = ball.y + ball.vy;
+  if (!GameState.ball.launched) {
+    GameState.ball.x = GameState.paddle.x + GameState.paddle.width / 2 - GameState.ball.width / 2;
+    GameState.ball.y = GameState.paddle.y - GameState.ball.height;
+    return;
+  }
+  GameState.ball.x = GameState.ball.x + GameState.ball.vx;
+  GameState.ball.y = GameState.ball.y + GameState.ball.vy;
 }
 
 function updatePickups() {
-  for (let i = pickups.length - 1; i >= 0; i--) {
-    pickups[i].y = pickups[i].y + 2;
-    if (pickups[i].y > HEIGHT) {
-      pickups.splice(i, 1);
+  for (let i = GameState.pickups.length - 1; i >= 0; i--) {
+    GameState.pickups[i].y = GameState.pickups[i].y + 2;
+    if (GameState.pickups[i].y > HEIGHT) {
+      GameState.pickups.splice(i, 1);
     }
   }
 }
@@ -162,11 +179,11 @@ function draw() {
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
   ctx.fillStyle = "white";
-  ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
-  ctx.fillRect(ball.x, ball.y, ball.width, ball.height);
+  ctx.fillRect(GameState.paddle.x, GameState.paddle.y, GameState.paddle.width, GameState.paddle.height);
+  ctx.fillRect(GameState.ball.x, GameState.ball.y, GameState.ball.width, GameState.ball.height);
 
   drawBricks();  // bricks.js
-  for (const pickup of pickups) {
+  for (const pickup of GameState.pickups) {
     ctx.fillStyle = pickup.kind === "wide" ? "#4ecdc4" : "#ffd166";
     ctx.fillRect(pickup.x, pickup.y, pickup.width, pickup.height);
     ctx.fillStyle = "black";
@@ -207,7 +224,7 @@ function frame(now) {
 }
 
 function start() {
-  bricks = makeBricks(stage);  // bricks.js
+  GameState.bricks = makeBricks(GameState.stage);  // bricks.js
   resetBall();
   updateStatus();
   lastTime = performance.now();
