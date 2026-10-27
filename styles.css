@@ -31,6 +31,7 @@ canvas {
 
 .status {
   display: flex;
+  gap: 18px;
   justify-content: center;
   padding: 10px 2px 0;
   font-size: 14px;
@@ -39,6 +40,65 @@ canvas {
 .status strong {
   color: #ffd166;
   font-size: 18px;
+}
+
+.ability-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ability-buttons button {
+  padding: 9px 12px;
+  border: 2px solid #fff;
+  background: #000;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ability-buttons button:hover:not(:disabled),
+.ability-buttons button:focus-visible {
+  background: #fff;
+  color: #000;
+}
+
+.ability-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.game-menu {
+  margin-top: 12px;
+  padding: 14px;
+  border: 2px solid #ffd166;
+}
+
+.game-menu h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+
+.game-menu button {
+  margin: 0 4px;
+  padding: 9px 12px;
+  border: 2px solid #fff;
+  background: #000;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.game-menu button:hover,
+.game-menu button:focus-visible {
+  background: #fff;
+  color: #000;
+}
+
+.ability-status {
+  min-height: 1.5em;
 }
 
 p {

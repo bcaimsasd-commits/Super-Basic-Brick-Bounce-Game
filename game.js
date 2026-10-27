@@ -41,7 +41,13 @@ const GameState = {
   },
   bricks: [],
   stage: 1,
+  lives: 3,
+  gameOver: false,
   pickups: [],
+  superPowerMs: 0,
+  weaponCooldownMs: 0,
+  projectiles: [],
+  menuOpen: false,
   launchBall() {
     if (this.ball.launched) {
       return;
@@ -68,9 +74,19 @@ function resetBall() {
 const PICKUP_SIZE = 16;
 
 const stageDisplay = document.getElementById("stage");
+const livesDisplay = document.getElementById("lives");
+const superPowerButton = document.getElementById("super-power");
+const weaponButton = document.getElementById("weapon");
+const abilityStatus = document.getElementById("ability-status");
+const gameMenu = document.getElementById("game-menu");
+const gameMenuTitle = document.getElementById("game-menu-title");
+const restartButton = document.getElementById("restart-stage");
+const skipButton = document.getElementById("skip-stage");
+const ABILITY_STEP_MS = 1000 / 60;
 
 function updateStatus() {
   stageDisplay.textContent = GameState.stage;
+  livesDisplay.textContent = GameState.lives;
 }
 
 function onBrickDestroyed(brick) {
@@ -83,6 +99,91 @@ function onBrickDestroyed(brick) {
   });
 }
 
+function removeBrickAt(index) {
+  const [brick] = GameState.bricks.splice(index, 1);
+  if (brick) {
+    onBrickDestroyed(brick);
+  }
+}
+
+function syncAbilityButtons() {
+  superPowerButton.disabled = GameState.superPowerMs > 0;
+  weaponButton.disabled = GameState.weaponCooldownMs > 0;
+}
+
+function activateSuperPower() {
+  if (GameState.superPowerMs > 0) {
+    return;
+  }
+  GameState.superPowerMs = 8000;
+  GameState.launchBall();
+  abilityStatus.textContent = "Super Power! Your ball smashes through bricks for 8 seconds.";
+  syncAbilityButtons();
+}
+
+function fireWeapon() {
+  if (GameState.weaponCooldownMs > 0) {
+    return;
+  }
+  GameState.projectiles.push({
+    x: GameState.paddle.x + GameState.paddle.width / 2 - 3,
+    y: GameState.paddle.y,
+    width: 6,
+    height: 14
+  });
+  GameState.weaponCooldownMs = 500;
+  abilityStatus.textContent = "Weapon fired! It recharges in half a second.";
+  syncAbilityButtons();
+}
+
+superPowerButton.addEventListener("click", activateSuperPower);
+weaponButton.addEventListener("click", fireWeapon);
+
+function resetStage() {
+  GameState.lives = 3;
+  GameState.gameOver = false;
+  GameState.ball.vx = 0;
+  GameState.ball.vy = 0;
+  GameState.superPowerMs = 0;
+  GameState.weaponCooldownMs = 0;
+  GameState.pickups = [];
+  GameState.projectiles = [];
+  GameState.paddle.width = 90;
+  GameState.paddle.x = WIDTH / 2 - GameState.paddle.width / 2;
+  GameState.bricks = makeBricks(GameState.stage);
+  resetBall();
+  updateStatus();
+  syncAbilityButtons();
+}
+
+function closeMenu() {
+  GameState.menuOpen = false;
+  gameMenu.hidden = true;
+  lastTime = performance.now();
+  leftover = 0;
+}
+
+function menu() {
+  GameState.menuOpen = true;
+  gameMenuTitle.textContent = GameState.gameOver ? "Game Over" : "Game Paused";
+  gameMenu.hidden = false;
+  keys["arrowleft"] = false;
+  keys["arrowright"] = false;
+  keys["a"] = false;
+  keys["d"] = false;
+}
+
+restartButton.addEventListener("click", function () {
+  resetStage();
+  closeMenu();
+});
+
+skipButton.addEventListener("click", function () {
+  GameState.stage = GameState.stage + 1;
+  resetStage();
+  closeMenu();
+});
+
 
 // ------------------------------------------------------------
 // KEYBOARD
@@ -92,8 +193,21 @@ const keys = {};
 
 document.addEventListener("keydown", function (event) {
   keys[event.key.toLowerCase()] = true;
+  if (event.key === "Escape") {
+    menu();
+    event.preventDefault();
+    return;
+  }
   if (event.code === "Space") {
     GameState.launchBall();
+    event.preventDefault();
+  }
+  if (!GameState.menuOpen && event.key.toLowerCase() === "s") {
+    activateSuperPower();
+    event.preventDefault();
+  }
+  if (!GameState.menuOpen && event.key.toLowerCase() === "w") {
+    fireWeapon();
     event.preventDefault();
   }
   // Stop the arrow keys from scrolling the page.
@@ -112,8 +226,12 @@ document.addEventListener("keyup", function (event) {
 // what they touched.
 // ------------------------------------------------------------
 function update() {
+  if (GameState.menuOpen) {
+    return;
+  }
   movePaddle();
   moveBall();
+  updateAbilities();
 
   bounceOffWalls();   // collisions.js
   bounceOffPaddle();  // collisions.js
@@ -127,9 +245,51 @@ function update() {
     updateStatus();
   }
 
+  function updateAbilities() {
+    const superPowerWasActive = GameState.superPowerMs > 0;
+    const weaponWasCoolingDown = GameState.weaponCooldownMs > 0;
+
+    GameState.superPowerMs = Math.max(0, GameState.superPowerMs - ABILITY_STEP_MS);
+    GameState.weaponCooldownMs = Math.max(0, GameState.weaponCooldownMs - ABILITY_STEP_MS);
+
+    if (superPowerWasActive && GameState.superPowerMs === 0) {
+      abilityStatus.textContent = "Super Power ended. It's ready again.";
+    }
+    if (weaponWasCoolingDown && GameState.weaponCooldownMs === 0) {
+      abilityStatus.textContent = "Weapon recharged and ready!";
+    }
+
+    for (let i = GameState.projectiles.length - 1; i >= 0; i--) {
+      const projectile = GameState.projectiles[i];
+      projectile.y -= 8;
+
+      if (projectile.y + projectile.height < 0) {
+        GameState.projectiles.splice(i, 1);
+        continue;
+      }
+
+      const brickIndex = GameState.bricks.findIndex((brick) => boxesTouch(projectile, brick));
+      if (brickIndex !== -1) {
+        removeBrickAt(brickIndex);
+        GameState.projectiles.splice(i, 1);
+      }
+    }
+
+    syncAbilityButtons();
+  }
+
   // The ball fell off the bottom: back to the center.
   if (GameState.ball.y > HEIGHT) {
-    resetBall();
+    GameState.lives = GameState.lives - 1;
+    updateStatus();
+    if (GameState.lives === 0) {
+      GameState.gameOver = true;
+      abilityStatus.textContent = "You ran out of lives.";
+      menu();
+    } else {
+      abilityStatus.textContent = "You lost a life. Get ready!";
+      resetBall();
+    }
   }
 }
 
@@ -180,9 +340,14 @@ function draw() {
 
   ctx.fillStyle = "white";
   ctx.fillRect(GameState.paddle.x, GameState.paddle.y, GameState.paddle.width, GameState.paddle.height);
+  ctx.fillStyle = GameState.superPowerMs > 0 ? "#ffd166" : "white";
   ctx.fillRect(GameState.ball.x, GameState.ball.y, GameState.ball.width, GameState.ball.height);
 
   drawBricks();  // bricks.js
+  for (const projectile of GameState.projectiles) {
+    ctx.fillStyle = "#ffd166";
+    ctx.fillRect(projectile.x, projectile.y, projectile.width, projectile.height);
+  }
   for (const pickup of GameState.pickups) {
     ctx.fillStyle = pickup.kind === "wide" ? "#4ecdc4" : "#ffd166";
     ctx.fillRect(pickup.x, pickup.y, pickup.width, pickup.height);
@@ -227,6 +392,7 @@ function start() {
   GameState.bricks = makeBricks(GameState.stage);  // bricks.js
   resetBall();
   updateStatus();
+  syncAbilityButtons();
   lastTime = performance.now();
   requestAnimationFrame(frame);
 }

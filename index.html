@@ -11,8 +11,19 @@
     <canvas id="game" width="600" height="450" aria-label="Block Breaker game"></canvas>
     <div class="status" aria-live="polite">
       <span>Stage <strong id="stage">1</strong></span>
+      <span>Lives <strong id="lives">3</strong></span>
     </div>
-    <p>Press Space to launch. Move the paddle with the arrow keys, or A and D.</p>
+    <div class="ability-buttons" aria-label="Game abilities">
+      <button id="super-power" type="button">Super Power</button>
+      <button id="weapon" type="button">Fire Weapon</button>
+    </div>
+    <section id="game-menu" class="game-menu" hidden aria-label="Game menu">
+      <h2 id="game-menu-title">Game Paused</h2>
+      <button id="restart-stage" type="button">Restart Stage</button>
+      <button id="skip-stage" type="button">Skip Stage</button>
+    </section>
+    <p id="ability-status" class="ability-status" aria-live="polite">Choose an ability to get help!</p>
+    <p>Press Space to launch. Move with the arrow keys or A and D. Press S for Super Power and W to fire.</p>
   </main>
 
   <!-- The order matters: game.js goes first because the other files use its settings. -->

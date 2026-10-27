@@ -54,30 +54,32 @@ function brickCollisionSystem() {
       continue;
     }
 
-    // How far has the ball pushed into the brick on each side?
-    const overlapX = Math.min(GameState.ball.x + GameState.ball.width, brick.x + brick.width) - Math.max(GameState.ball.x, brick.x);
-    const overlapY = Math.min(GameState.ball.y + GameState.ball.height, brick.y + brick.height) - Math.max(GameState.ball.y, brick.y);
+    if (GameState.superPowerMs <= 0) {
+      // How far has the ball pushed into the brick on each side?
+      const overlapX = Math.min(GameState.ball.x + GameState.ball.width, brick.x + brick.width) - Math.max(GameState.ball.x, brick.x);
+      const overlapY = Math.min(GameState.ball.y + GameState.ball.height, brick.y + brick.height) - Math.max(GameState.ball.y, brick.y);
 
-    if (overlapX < overlapY) {
-      // The ball hit the brick's left or right side.
-      GameState.ball.vx = -GameState.ball.vx;
-      if (GameState.ball.x < brick.x) {
-        GameState.ball.x = brick.x - GameState.ball.width;
+      if (overlapX < overlapY) {
+        // The ball hit the brick's left or right side.
+        GameState.ball.vx = -GameState.ball.vx;
+        if (GameState.ball.x < brick.x) {
+          GameState.ball.x = brick.x - GameState.ball.width;
+        } else {
+          GameState.ball.x = brick.x + brick.width;
+        }
       } else {
-        GameState.ball.x = brick.x + brick.width;
-      }
-    } else {
-      // The ball hit the brick's top or bottom.
-      GameState.ball.vy = -GameState.ball.vy;
-      if (GameState.ball.y < brick.y) {
-        GameState.ball.y = brick.y - GameState.ball.height;
-      } else {
-        GameState.ball.y = brick.y + brick.height;
+        // The ball hit the brick's top or bottom.
+        GameState.ball.vy = -GameState.ball.vy;
+        if (GameState.ball.y < brick.y) {
+          GameState.ball.y = brick.y - GameState.ball.height;
+        } else {
+          GameState.ball.y = brick.y + brick.height;
+        }
       }
     }
 
     if (brick.breakable) {
-      brick.breakable.hitsLeft = brick.breakable.hitsLeft - 1;
+      brick.breakable.hitsLeft = GameState.superPowerMs > 0 ? 0 : brick.breakable.hitsLeft - 1;
 
       if (brick.breakable.hitsLeft <= 0) {
         GameState.bricks.splice(i, 1);
