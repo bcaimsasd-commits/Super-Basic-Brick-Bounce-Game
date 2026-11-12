@@ -44,6 +44,8 @@ const GameState = {
   lives: 3,
   gameOver: false,
   pickups: [],
+  paddleHitParticles: [],
+  paddleHitFlashMs: 0,
   superPowerMs: 0,
   weaponCooldownMs: 0,
   projectiles: [],
@@ -229,12 +231,14 @@ function update() {
   if (GameState.menuOpen) {
     return;
   }
+  updateBricks();
   movePaddle();
   moveBall();
   updateAbilities();
 
   bounceOffWalls();   // collisions.js
   bounceOffPaddle();  // collisions.js
+  updatePaddleHitEffects();
   brickCollisionSystem();  // collisions.js
   updatePickups();
   pickupCollisionSystem();  // collisions.js
@@ -293,6 +297,20 @@ function update() {
   }
 }
 
+function updatePaddleHitEffects() {
+  GameState.paddleHitFlashMs = Math.max(0, GameState.paddleHitFlashMs - STEP);
+  for (let i = GameState.paddleHitParticles.length - 1; i >= 0; i--) {
+    const particle = GameState.paddleHitParticles[i];
+    particle.x += particle.vx;
+    particle.y += particle.vy;
+    particle.vy += 0.08;
+    particle.lifeMs -= STEP;
+    if (particle.lifeMs <= 0) {
+      GameState.paddleHitParticles.splice(i, 1);
+    }
+  }
+}
+
 function movePaddle() {
   if (keys["arrowleft"] || keys["a"]) {
     GameState.paddle.x = GameState.paddle.x - GameState.paddle.speed;
@@ -338,8 +356,27 @@ function draw() {
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
+  if (GameState.paddleHitFlashMs > 0) {
+    ctx.save();
+    ctx.shadowColor = "#4ecdc4";
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = "#4ecdc4";
+    ctx.fillRect(GameState.paddle.x, GameState.paddle.y, GameState.paddle.width, GameState.paddle.height);
+    ctx.restore();
+  }
   ctx.fillStyle = "white";
   ctx.fillRect(GameState.paddle.x, GameState.paddle.y, GameState.paddle.width, GameState.paddle.height);
+  for (const particle of GameState.paddleHitParticles) {
+    ctx.save();
+    ctx.globalAlpha = particle.lifeMs / particle.maxLifeMs;
+    ctx.fillStyle = particle.color;
+    ctx.shadowColor = particle.color;
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
   ctx.fillStyle = GameState.superPowerMs > 0 ? "#ffd166" : "white";
   ctx.fillRect(GameState.ball.x, GameState.ball.y, GameState.ball.width, GameState.ball.height);
 

@@ -40,8 +40,28 @@ function bounceOffWalls() {
 // when it is falling onto the paddle.
 function bounceOffPaddle() {
   if (boxesTouch(GameState.ball, GameState.paddle) && GameState.ball.vy > 0) {
+    const hitX = Math.max(
+      GameState.paddle.x,
+      Math.min(GameState.ball.x + GameState.ball.width / 2, GameState.paddle.x + GameState.paddle.width)
+    );
     GameState.ball.y = GameState.paddle.y - GameState.ball.height;  // sit on top of the paddle
     GameState.ball.vy = -GameState.ball.vy;
+    GameState.paddleHitFlashMs = 120;
+    for (let i = 0; i < 12; i++) {
+      const angle = -Math.PI + (Math.PI * i) / 11;
+      const speed = 1.5 + Math.random() * 2;
+      const lifeMs = 220 + Math.random() * 180;
+      GameState.paddleHitParticles.push({
+        x: hitX,
+        y: GameState.paddle.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        radius: 1.5 + Math.random() * 2,
+        lifeMs,
+        maxLifeMs: lifeMs,
+        color: i % 2 === 0 ? "#4ecdc4" : "#ffd166"
+      });
+    }
   }
 }
 
